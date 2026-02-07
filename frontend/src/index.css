@@ -1,0 +1,42 @@
+@import "tailwindcss";
+:root {
+  font-family: "Inter", sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  --vaikro-yellow: rgba(250, 204, 21, 1);
+  --vaikro-yellow-opaque: rgba(250, 204, 21, 0.92);
+  --vaikro-bg: #070707;
+  --vaikro-panel: #0f0f0f;
+  color: var(--vaikro-yellow-opaque);
+  background-color: var(--vaikro-bg);
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+body {
+  margin: 0;
+  display: flex;
+  place-items: center;
+  justify-content: center;
+  min-width: 320px;
+  min-height: 100vh;
+}
+.markdown > * {
+  all: revert;
+}
+
+/* small UI helpers */
+.glass {
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), rgb(0, 0, 0));
+  backdrop-filter: blur(6px) saturate(110%);
+}
+
+.accent-underline {
+  display: inline-block;
+  background-image: linear-gradient(90deg, rgba(250,204,21,0.14), rgba(250,204,21,0.28));
+  padding-bottom: 4px;
+}
+
