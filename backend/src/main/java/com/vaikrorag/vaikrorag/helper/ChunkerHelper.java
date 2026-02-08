@@ -107,9 +107,7 @@ public class ChunkerHelper {
         return overlap;
     }
     
-    /**
-     * Splits a single long sentence that exceeds maxChunkSize
-     */
+    //Splits a single long sentence that exceeds maxChunkSize
     private static List<String> splitLongSentence(String sentence, int maxChunkSize, int overlap) {
         List<String> chunks = new ArrayList<>();
         String[] words = sentence.split("\\s+");
@@ -149,9 +147,7 @@ public class ChunkerHelper {
         return chunks;
     }
     
-    /**
-     * Fallback character-based chunking with overlap
-     */
+    //Fallback character-based chunking with overlap
     private static List<String> fallbackChunking(String text, int maxChunkSize, int overlap) {
         List<String> chunks = new ArrayList<>();
         int start = 0;

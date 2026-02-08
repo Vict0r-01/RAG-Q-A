@@ -9,6 +9,6 @@ import com.vaikrorag.vaikrorag.model.Messages;
 
 @Repository
 public interface MessagesRepo extends JpaRepository<Messages, Long> {
-
-    public List<Messages> getAllMessagesBySessionId(String sessionId);
+    
+    public List<Messages> findAllBySessionIdOrderByIdAsc(String sessionId);
 }

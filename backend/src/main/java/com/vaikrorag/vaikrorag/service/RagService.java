@@ -13,6 +13,9 @@ import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.prompt.PromptTemplate;
 import org.springframework.ai.openai.OpenAiChatModel;
+import org.springframework.ai.rag.Query;
+import org.springframework.ai.rag.preretrieval.query.transformation.CompressionQueryTransformer;
+import org.springframework.ai.rag.preretrieval.query.transformation.QueryTransformer;
 import org.springframework.stereotype.Service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,8 +45,8 @@ public class RagService {
 
         final String requestId = UUID.randomUUID().toString();
         final Instant start = Instant.now();
-
-        if(messages.get(messages.size()-1).getText().isBlank() || messages.get(messages.size()-1).getText().isEmpty())
+        String userQuery = messages.get(messages.size()-1).getText();
+        if(userQuery.isBlank() || userQuery.isEmpty())
             return Flux.empty();
         //Logging Initial Request
         try {
@@ -51,7 +54,7 @@ public class RagService {
                 "event", "rag.request.start",
                 "requestId", requestId,
                 "sessionId", sessionId,
-                "query", messages.get(messages.size()-1).getText(),
+                "query", userQuery,
                 "messageCount", messages.size()
             );
             log.info(json.writeValueAsString(startLog));
@@ -73,11 +76,11 @@ public class RagService {
 
             Given the context information, answer the query.
 
-            When you use information from the context, append a 'Sources' section listing the source metadata for each cited chunk in the format: [Title: <title>, ChunkIndex: <index>].
-
-            Follow these rules:
-
-            1. Use context to help you with the answer, if the context could not help you find the answer say that you were not able to find it and to clarify the question.
+            Rules:
+                1. Use the context when it contains relevant information.
+                2. If the context is not helpful or does not contain the answer, say it, and then rely on your own reasoning and general knowledge to answer the query.
+                3. If you use information from the context, append a 'Sources' section listing the source metadata for each cited chunk in the format: 
+                [Title: <title>, ChunkIndex: <index>].
             """)
     .build();
 
@@ -86,18 +89,24 @@ public class RagService {
         ChatClient.Builder chatClient = ChatClient.builder(openAiChatModel);
 
         // 3) Create Query
-        String systemMsg = "You are a helpful assistant. Answer using ONLY the information in the provided context. " +
-    "If the 'Context' is not provided, ask to add it. If the answer is not found in the context, say that you were not able to find it and to clarify the question." +
-    "Be concise.";
-        String userQuery = messages.get(messages.size()-1).getText();
-
+        String systemMsg = "You are a helpful assistant that provide answers based on the context and the rules provided" + "Be concise.";
         //Get chat history
         List<Message> messageList = new ArrayList<>();
         for(int j = 0; j < messages.size()-1; j++){
             messageList.add((messages.get(j).isUser()) ? new UserMessage(messages.get(j).getText()) : new AssistantMessage(messages.get(j).getText()));
         }
-        
-        // 4) Create Response
+
+        Query query = Query.builder()
+        .text(userQuery)
+        .history(messageList)
+        .build();
+
+        QueryTransformer queryTransformer = CompressionQueryTransformer.builder()
+        .chatClientBuilder(chatClient)
+        .build();
+
+        Query compressedQuery = queryTransformer.transform(query);
+        // 3) Create Response
 
         try {
             log.info("requestId={} calling chat model", requestId);
@@ -106,7 +115,7 @@ public class RagService {
             .advisors(qdrantService.getAdvisor(sessionId, topK, customPromptTemplate))
             .messages(messageList)
             .system(systemMsg)
-            .user(userQuery)
+            .user(compressedQuery.text())
             .stream()
             .content()
             .transform(flux -> toChunk(flux, 50));
@@ -116,8 +125,8 @@ public class RagService {
                 "event", "rag.request.finish",
                 "requestId", requestId,
                 "sessionId", sessionId,
-                "query", userQuery,
-                "messages", messageList,
+                "query", compressedQuery.text(),
+                "messages", compressedQuery.history(),
                 "latencyMs", Duration.between(start, Instant.now()).toMillis()
             );
             log.info(json.writeValueAsString(endLog));
@@ -160,7 +169,7 @@ public class RagService {
     }
 
     public List<Messages> getMessages(String sessionId){
-        return messagesRepo.getAllMessagesBySessionId(sessionId);
+        return messagesRepo.findAllBySessionIdOrderByIdAsc(sessionId);
     }
 
     public void addMessage(Messages message){
