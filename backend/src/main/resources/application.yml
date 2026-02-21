@@ -1,7 +1,9 @@
 spring:
   application:
     name: vaikrorag
-  
+  servlet:
+    multipart:
+      max-file-size: 50MB
   jpa:
     hibernate:
       ddl-auto: update

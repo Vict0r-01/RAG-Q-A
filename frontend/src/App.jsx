@@ -49,7 +49,6 @@ function App() {
   //Get messages for session
   const getMessages = async () => {
     try {
-      console.log(API_BASE)
       const response = await fetch(`${API_BASE}/getMessages/${sessionId}`, {
         method: 'GET',
         headers: {
@@ -115,7 +114,6 @@ function App() {
 
 //Upload document
   const submitDocument = async (file) => {
-    console.log("Uploading Doc");
     try {
       const response = await fetch(`${API_BASE}/documents/upload/${sessionId}`, {
         method: 'POST',
@@ -148,6 +146,10 @@ function App() {
     if(file) {
       if(file.type !== 'application/pdf') {
         console.error('Only PDF files are supported.');
+        return;
+      }
+      if(file.size > 50 * 1024 * 1024) {
+        console.error('File size exceeds 50MB limit.');
         return;
       }
       setLoading(true);
@@ -185,7 +187,6 @@ function App() {
       //Server-Sent Events response
       let stream = events(response, abort);
       for await (let event of stream) {
-        console.log(event.data);
         answerRef.current += event.data + " ";
         fullAnswer = answerRef.current;
         
